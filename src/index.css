@@ -42,3 +42,10 @@ ul {
     border-radius: 40px;
     font-size: 14px;
 }
+
+.commit-list {
+	font-size: 14px;
+	padding-right: 2em;
+	font-family: monospace;
+	margin-left: 3em;
+}

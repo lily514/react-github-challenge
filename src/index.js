@@ -63,24 +63,6 @@ class SearchForm extends React.Component {
 	}
 }
 
-function RepoItem(props) {
-  const repo=props.value
-  return (
-  	<div className="search-result-item">
-  	<div class="row">
-  		<div class="flex-column " className="item-name">
-  			<h3><a href={repo.html_url}>{repo.full_name}</a></h3>
-  		</div>
-  		<div class="flex-column ">
-  			<button class="preview-button btn btn-primary btn-sm ">Preview</button>
-  		</div>
-  	</div>
-  	
-  	<p>{repo.description}</p>
-  	</div>
-  );
-}
-
 function RepoList(props) {
 	if (props.repos){
 		return (
@@ -97,11 +79,90 @@ function RepoList(props) {
 	}	
 }
 
-function RepoData(props){
-	if (props.repos){
+class RepoItem extends React.Component {
+	constructor(props) {
+		super(props);
+		this.state = {
+			name: this.props.value.full_name,
+			url: this.props.value.html_url,
+			ownder: this.props.value.owner.login,
+			description: this.props.value.description,
+			preview: false,
+			commits: []
+		};
+		this.handlePreview = this.handlePreview.bind(this);
 
 	}
+
+	getCommits(){
+		//&sort=stars&order=desc`)
+	    fetch(`https://api.github.com/repos/${this.state.name}/commits`)
+	      .then(response => response.json())
+	      .then(responseData => {
+	      	console.log(responseData);
+	        this.setState({
+	          commits: responseData,
+	        });
+	      })
+	      .catch(error => {
+	        console.log('Error fetching and parsing data', error);
+	      });
+
+	}
+
+	handlePreview(event){
+		this.setState({
+			preview: !this.state.preview
+		})
+		this.getCommits()
+	}
+
+	render(){
+	  return (
+	  	<div className="search-result-item">
+	  	<div className="row">
+	  		<div className="flex-column item-name">
+	  			<h3><a href={this.state.url}>{this.state.name}</a></h3>
+	  		</div>
+	  		<div className="flex-column ">
+	  			<button className="preview-button btn btn-primary btn-sm " onClick={this.handlePreview}>Preview</button>
+	  		</div>
+	  	</div>
+	  	<p>{this.state.description}</p>
+	  	<div className="preview">
+	  		<CommitList commits={this.state.commits} />
+	  	</div>
+	  	</div>
+	  );
+	}
 }
+
+function CommitItem(props){
+	return(
+		<li>{props.value.message}</li>
+	);
+}
+
+
+function CommitList(props) {
+	console.log(props.commits[0])
+	if (props.commits) {
+		return (
+			<ul className="commit-list">
+				{props.commits.slice(0,5).map((commit) =>
+		      		<CommitItem key={commit.sha}
+		                		value={commit.commit} />
+		        )}
+			</ul>
+		)
+	}
+	else {
+		return null;
+	}
+}
+
+
+
 
 ReactDOM.render(
   < SearchForm />,
