@@ -44,10 +44,10 @@ class SearchForm extends React.Component {
 
 	render(){
 		return (
-			<div>
-			<form onSubmit={this.handleSubmit}>
+			<div className="search-container">
+			<h1>Github Repository Search</h1>
+			<form className="search-form" onSubmit={this.handleSubmit}>
 				<label> 
-					Search:
 					<input 
 						type="text" 
 						value={this.state.value} 
@@ -64,16 +64,30 @@ class SearchForm extends React.Component {
 }
 
 function RepoItem(props) {
-  return <li>{props.value}</li>;
+  const repo=props.value
+  return (
+  	<div className="search-result-item">
+  	<div class="row">
+  		<div class="flex-column " className="item-name">
+  			<h3><a href={repo.html_url}>{repo.full_name}</a></h3>
+  		</div>
+  		<div class="flex-column ">
+  			<button class="preview-button btn btn-primary btn-sm ">Preview</button>
+  		</div>
+  	</div>
+  	
+  	<p>{repo.description}</p>
+  	</div>
+  );
 }
 
 function RepoList(props) {
 	if (props.repos){
 		return (
-		  <ul>
+		  <ul className="search-results">
 		    {props.repos.map((repo) =>
 		      <RepoItem key={repo.id}
-		                value={repo.name} />
+		                value={repo} />
 		    )}
 		  </ul>
 		);  
@@ -83,9 +97,15 @@ function RepoList(props) {
 	}	
 }
 
+function RepoData(props){
+	if (props.repos){
+
+	}
+}
+
 ReactDOM.render(
   < SearchForm />,
-  document.getElementById('root')
+  document.getElementById('app')
 
 );
 
