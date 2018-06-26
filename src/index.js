@@ -28,7 +28,7 @@ class SearchForm extends React.Component {
 
 	performSearch(query) {
 	    //&sort=stars&order=desc`)
-	    fetch(`https://api.github.com/search/repositories?q=${query}`)
+	    fetch(`https://api.github.com/search/repositories?q=${query}&sort=stars&order=desc`)
 	      .then(response => response.json())
 	      .then(responseData => {
 	      	console.log(responseData.items);
@@ -88,6 +88,7 @@ class RepoItem extends React.Component {
 			ownder: this.props.value.owner.login,
 			description: this.props.value.description,
 			preview: false,
+			buttontext:'Preview',
 			commits: []
 		};
 		this.handlePreview = this.handlePreview.bind(this);
@@ -95,7 +96,6 @@ class RepoItem extends React.Component {
 	}
 
 	getCommits(){
-		//&sort=stars&order=desc`)
 	    fetch(`https://api.github.com/repos/${this.state.name}/commits`)
 	      .then(response => response.json())
 	      .then(responseData => {
@@ -111,10 +111,22 @@ class RepoItem extends React.Component {
 	}
 
 	handlePreview(event){
-		this.setState({
-			preview: !this.state.preview
-		})
-		this.getCommits()
+		console.log('clicked preview');
+		if (!this.state.preview){
+			this.getCommits();
+			this.setState({
+				preview: !this.state.preview,
+				buttontext: 'Close Preview'
+			});
+		}
+		else{
+			this.setState({
+				preview: !this.state.preview,
+				buttontext: 'Preview',
+				commits: []
+			});
+		}
+		
 	}
 
 	render(){
@@ -125,7 +137,7 @@ class RepoItem extends React.Component {
 	  			<h3><a href={this.state.url}>{this.state.name}</a></h3>
 	  		</div>
 	  		<div className="flex-column ">
-	  			<button className="preview-button btn btn-primary btn-sm " onClick={this.handlePreview}>Preview</button>
+	  			<button className="preview-button btn btn-primary btn-sm " onClick={this.handlePreview}>{this.state.buttontext}</button>
 	  		</div>
 	  	</div>
 	  	<p>{this.state.description}</p>
@@ -145,7 +157,6 @@ function CommitItem(props){
 
 
 function CommitList(props) {
-	console.log(props.commits[0])
 	if (props.commits) {
 		return (
 			<ul className="commit-list">
