@@ -11,6 +11,9 @@
 	padding-bottom: 1%;
 
 }
+.search-input {
+	width: 40%;
+}
 
 .search-results{
 	margin-top: 2%;
@@ -46,6 +49,13 @@ ul {
 .commit-list {
 	font-size: 14px;
 	padding-right: 2em;
-	font-family: monospace;
 	margin-left: 3em;
+}
+
+.commit-message {
+	font-family: monospace;
+}
+
+.hidden {
+	visibility: hidden;
 }
