@@ -2,8 +2,9 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-const sortDefault = 'Sort by';
-const filterDefault = 'Filter by';
+const orderDefault = 'Order by';
+const orderDefaulted = 'bm'; //best match is default too
+const filterDefault = 'Filter Language';
 
 class SearchForm extends React.Component {
 	constructor(props) {
@@ -12,13 +13,13 @@ class SearchForm extends React.Component {
 			value: '',
 			results: [],
 			loading: false,
-			sort: sortDefault,
+			order: orderDefault,
 			filter: filterDefault
 		};
 
 		this.handleChange = this.handleChange.bind(this);
 		this.handleSubmit = this.handleSubmit.bind(this);
-		this.onSortSelect = this.onSortSelect.bind(this);
+		this.onOrderSelect = this.onOrderSelect.bind(this);
 		this.onFilterSelect = this.onFilterSelect.bind(this);
 	}
 
@@ -35,14 +36,14 @@ class SearchForm extends React.Component {
 		event.preventDefault();
 	}
 
-	onSortSelect(event){
+	onOrderSelect(event){
 		console.log(event.target.value)
 		this.setState({
-			sort: event.target.value,
+			order: event.target.value,
 			results: []
 		});
 		if (this.state.value !== ''){
-			this.performSearch(this.state.value);	
+			this.performSearch(this.state.value, this.state.filter, event.target.value);	
 		}
 		event.preventDefault();
 	}
@@ -54,21 +55,27 @@ class SearchForm extends React.Component {
 			results: []
 		});
 		if (this.state.value !== ''){
-			this.performSearch(this.state.value, event.target.value);	
+			this.performSearch(this.state.value, event.target.value, this.state.order);	
 		}
 		
 		event.preventDefault();
 	}
 
-
-	performSearch(query, filter) {
-	    //&sort=stars&order=desc`)
+//search?o=desc&q=hello&s=updated&type=Repositories
+	performSearch(query, filter, order) {
 	    //+ "?access_token=aa6f1f03df844f3049fcd49aab7509f0a"
 	    var url = "https://api.github.com/search/repositories?q=" + query ;
 	    if(filter !== filterDefault && filter !== undefined){
-	    	url += "+language=" + filter;
+	    	url += "+language:" + filter;
 	    }
-	    fetch(url)
+	    if(order !== orderDefault && order !== undefined){
+	    	url += "&sort=updated&order=" + order;
+	    }
+	    console.log(url);
+	    fetch(url
+	    	// {method: 'get', headers: 
+	    	// new Headers({'Accept': 'application/vnd.github.mercy-preview+json', 'Access-Control-Allow-Origin':'*'}) }
+	    )
 	      .then(response => response.json())
 	      .then(responseData => {
 	      	console.log(responseData.items);
@@ -106,7 +113,7 @@ class SearchForm extends React.Component {
 					<FilterComponent handler={this.onFilterSelect} />
 				</div>
 				<div className="form-group col-lg-2">
-					<SortComponent handler={this.onSortSelect} />
+					<OrderComponent handler={this.onOrderSelect} />
 				</div>
 
 				</div>
@@ -156,26 +163,19 @@ function FilterComponent(props) {
 	)					
 }
 
-const sortable = [
-"Best Match",
-"Ascending",
-"Descending"
-]
-
-function SortComponent(props){
+function OrderComponent(props){
 		return(
 		<select onChange={props.handler} className="custom-select">
-			<option key='default' selected>{sortDefault}</option>
-			{sortable.map((opt) =>
-		      <option key={opt} value={opt}>{opt}</option>
-		    )}
+			<option key='default' selected>{orderDefault}</option>
+            <option key='asc' value='asc'>Ascending</option>
+            <option key='desc' value='desc'>Descending</option>
 		</select>
 
 	)
 }
 
 function RepoList(props) {
-	if (props.repos === undefined || props.repos.length == 0) {
+	if (props.repos === undefined || props.repos.length === 0) {
 		return null;
 		//TODO: how to tell if the results return empty
 	} else {
@@ -198,6 +198,7 @@ class RepoItem extends React.Component {
 			url: this.props.value.html_url,
 			ownder: this.props.value.owner.login,
 			description: this.props.value.description,
+			date: this.props.value.updated_at.slice(0,10),
 			preview: false,
 			buttontext:'Preview',
 			commits: []
@@ -253,6 +254,7 @@ class RepoItem extends React.Component {
 	  		</div>
 	  	</div>
 	  	<p>{this.state.description}</p>
+	  	<p>Updated: {this.state.date}</p>
 	  	<div className="preview">
 	  		<CommitList commits={this.state.commits} />
 	  	</div>
