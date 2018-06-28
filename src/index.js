@@ -2,7 +2,7 @@ import React from 'react';
 import ReactDOM from 'react-dom';
 import './index.css';
 
-const orderDefault = 'Order by';
+const orderDefault = 'Sort: Best Match';
 const orderDefaulted = 'bm'; //best match is default too
 const filterDefault = 'Filter Language';
 
@@ -11,10 +11,12 @@ class SearchForm extends React.Component {
 		super(props);
 		this.state = {
 			value: '',
-			results: [],
+			results: undefined,
 			loading: false,
 			order: orderDefault,
-			filter: filterDefault
+			filter: filterDefault,
+			showResults: false,
+			count: 0
 		};
 
 		this.handleChange = this.handleChange.bind(this);
@@ -30,7 +32,7 @@ class SearchForm extends React.Component {
 	handleSubmit(event){
 		this.setState({
 			loading: true,
-			results: []
+			results: undefined
 		});
 		this.performSearch(this.state.value);
 		event.preventDefault();
@@ -40,7 +42,7 @@ class SearchForm extends React.Component {
 		console.log(event.target.value)
 		this.setState({
 			order: event.target.value,
-			results: []
+			results: undefined
 		});
 		if (this.state.value !== ''){
 			this.performSearch(this.state.value, this.state.filter, event.target.value);	
@@ -52,7 +54,7 @@ class SearchForm extends React.Component {
 		console.log(event.target.value)
 		this.setState({
 			filter: event.target.value,
-			results: []
+			results: undefined
 		});
 		if (this.state.value !== ''){
 			this.performSearch(this.state.value, event.target.value, this.state.order);	
@@ -81,7 +83,9 @@ class SearchForm extends React.Component {
 	      	console.log(responseData.items);
 	        this.setState({
 	          results: responseData.items,
-	          loading: false
+	          loading: false,
+	          showResults: true,
+	          count: responseData.total_count
 	        });
 	      })
 	      .catch(error => {
@@ -95,30 +99,29 @@ class SearchForm extends React.Component {
 			<h1>Github Repository Search</h1>
 			<form className="search-form" onSubmit={this.handleSubmit}>
 				<div className="form-row">
-				<div className="form-group col-lg-5">
-					<input 
-						type="text" 
-						value={this.state.value} 
-						onChange={this.handleChange}
-						className="form-control"
-						placeholder="Search for a repository..."
-					/>
-				</div>
+					<div className="form-group col-lg-5">
+						<input 
+							type="text" 
+							value={this.state.value} 
+							onChange={this.handleChange}
+							className="form-control"
+							placeholder="Search for a repository..."
+						/>
+					</div>
 
-				<div className="form-group col-lg-3">
-				<input className="btn btn-primary" type="submit" value="Submit"/>
-				</div>
-
-				<div className="form-group col-lg-2">
-					<FilterComponent handler={this.onFilterSelect} />
-				</div>
-				<div className="form-group col-lg-2">
-					<OrderComponent handler={this.onOrderSelect} />
-				</div>
-
+					<div className="form-group col-lg-3">
+					<input className="btn btn-primary" type="submit" value="Submit"/>
+					</div>
+					
+					<div className="form-group col-lg-2">
+						{ this.state.showResults ? <FilterComponent handler={this.onFilterSelect} /> : null }
+					</div>
+					<div className="form-group col-lg-2">
+						{ this.state.showResults ? <OrderComponent handler={this.onOrderSelect} /> : null }
+					</div>
 				</div>
 			</form>
-				<RepoList repos={this.state.results}/>
+				{ this.state.showResults ? <RepoList repos={this.state.results} total={this.state.count}/> : null }
 			</div>
 
 		);
@@ -157,7 +160,7 @@ function FilterComponent(props) {
 		<select onChange={props.handler} className="custom-select">
 			<option key='default' selected>{filterDefault}</option>
 			{languages.map((lang) =>
-		      <option key={lang} value={lang}>{lang}</option>
+		      <option key={lang} value={lang}>Filter: {lang}</option>
 		    )}
 		</select>
 	)					
@@ -166,21 +169,24 @@ function FilterComponent(props) {
 function OrderComponent(props){
 		return(
 		<select onChange={props.handler} className="custom-select">
-			<option key='default' selected>{orderDefault}</option>
-            <option key='asc' value='asc'>Ascending</option>
-            <option key='desc' value='desc'>Descending</option>
+			<option key='default' selected>Sort: Best Match</option>
+            <option key='asc' value='asc'>Sort: Ascending</option>
+            <option key='desc' value='desc'>Sort: Descending</option>
 		</select>
 
 	)
 }
 
 function RepoList(props) {
-	if (props.repos === undefined || props.repos.length === 0) {
+	if (props.repos === undefined ) {
 		return null;
+	} else if ( props.repos.length === 0) {
+		return <p>No matching results</p>
 		//TODO: how to tell if the results return empty
 	} else {
 		return (
 		  <ul className="search-results">
+		  <h5>Showing {props.repos.length} of {props.total} results.</h5>
 		    {props.repos.map((repo) =>
 		      <RepoItem key={repo.id}
 		                value={repo} />
@@ -198,10 +204,10 @@ class RepoItem extends React.Component {
 			url: this.props.value.html_url,
 			ownder: this.props.value.owner.login,
 			description: this.props.value.description,
-			date: this.props.value.updated_at.slice(0,10),
+			updated_at: this.props.value.updated_at,
 			preview: false,
 			buttontext:'Preview',
-			commits: []
+			commits: undefined
 		};
 		this.handlePreview = this.handlePreview.bind(this);
 
@@ -236,7 +242,7 @@ class RepoItem extends React.Component {
 			this.setState({
 				preview: !this.state.preview,
 				buttontext: 'Preview',
-				commits: []
+				commits: undefined
 			});
 		}
 		
@@ -254,10 +260,8 @@ class RepoItem extends React.Component {
 	  		</div>
 	  	</div>
 	  	<p>{this.state.description}</p>
-	  	<p>Updated: {this.state.date}</p>
-	  	<div className="preview">
-	  		<CommitList commits={this.state.commits} />
-	  	</div>
+	  	<p>Updated: {LastUpdated(this.state.updated_at)} </p>
+	  	{ this.state.preview ? <CommitList commits={this.state.commits} /> : null }
 	  	</div>
 	  );
 	}
@@ -272,23 +276,43 @@ function CommitItem(props){
 
 //currently only shows most recent 10 commits 
 function CommitList(props) {
-	if (props.commits) {
+	if (props.commits === undefined ) {
+		return null;
+	} else if ( props.commits.length === 0) {
+		return <p>No commits.</p>
+		//TODO: how to tell if the results return empty
+	} 
+	else {
 		return (
+			<div className="preview">
+			<p> Recent commits: </p>
 			<ul className="commit-list">
 				{props.commits.slice(0,10).map((commit) =>
 		      		<CommitItem key={commit.sha}
 		                		value={commit.commit} />
 		        )}
 			</ul>
+			</div>
 		)
-	}
-	else {
-		return null;
 	}
 }
 
+const monthsArray = [
+"January",
+"February",
+"March",
+"April",
+"May",
+"June",
+"July",
+"August",
+"September",
+"October",
+"November",
+"December"]
+
 //Github expects: YYYY-MM-DDTHH:MM:SSZ
-function SevenDaysPrior(){
+function SevenDaysPrior(props){
 	//https://stackoverflow.com/questions/19910161/javascript-calculating-date-from-today-date-to-7-days-before/20329800
 	var days = 7; // Days you want to subtract
 	var date = new Date();
@@ -298,6 +322,28 @@ function SevenDaysPrior(){
 	var year=last.getFullYear();
 	return year + '-' + month + '-' + day + 'T00:00:00Z'
 }
+
+function LastUpdated(props){
+	console.log(props)
+	var date = new Date(props);
+	var now = new Date();
+	var today = (now.getDate() + "");
+	var difference = Math.abs(now - date) / 36e5;
+	if (difference < 1) {
+		var minutes = Math.floor(difference % 1 * 60)
+		return minutes + "minutes ago."
+
+	}
+	else if (difference < 12 ) {
+		return Math.floor(difference) + " hours ago."
+	}
+	else{
+		return (monthsArray[date.getMonth()] + ' ' +date.getDate() + ', ' + date.getFullYear());
+	}
+	
+	
+}
+
 
 
 ReactDOM.render(
