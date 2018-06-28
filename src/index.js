@@ -253,9 +253,10 @@ class RepoItem extends React.Component {
 
 //Displays a commit item in the CommitList
 function CommitItem(props){
-	var date = props.value.committer.date.slice(0,10)
+	var date = new Date(props.value.committer.date);
+	var datestr = (date.getMonth()+1) + "/" + date.getDate() + '/' + date.getFullYear();
 	return(
-		<li className="commit-item"><strong>{date}:</strong> "{props.value.message}"</li>
+		<li className="commit-item"><strong>{datestr}:</strong> "{props.value.message}"</li>
 	);
 }
 
