@@ -3,10 +3,6 @@ import ReactDOM from 'react-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import './index.css';
 
-const orderDefault = 'Sort: Best Match';
-const orderDefaulted = 'bm'; //best match is default too
-const filterDefault = 'Filter Language';
-
 class SearchForm extends React.Component {
 	constructor(props) {
 		super(props);
@@ -26,19 +22,22 @@ class SearchForm extends React.Component {
 		this.onFilterSelect = this.onFilterSelect.bind(this);
 	}
 
+	// called when keyword text changes
 	handleChange(event){
 		this.setState({value: event.target.value});
 	}
 
+	// called when submit button clicked
 	handleSubmit(event){
 		this.setState({
 			loading: true,
 			results: undefined
 		});
-		this.performSearch(this.state.value);
+		this.performSearch(this.state.value, this.state.filter, this.state.order);
 		event.preventDefault();
 	}
 
+	//if different order is chosen, updates state and searches again
 	onOrderSelect(event){
 		console.log(event.target.value)
 		this.setState({
@@ -51,6 +50,7 @@ class SearchForm extends React.Component {
 		event.preventDefault();
 	}
 
+	//if filter by language is chosen, updates state and searches again
 	onFilterSelect(event){
 		console.log(event.target.value)
 		this.setState({
@@ -60,13 +60,12 @@ class SearchForm extends React.Component {
 		if (this.state.value !== ''){
 			this.performSearch(this.state.value, event.target.value, this.state.order);	
 		}
-		
 		event.preventDefault();
 	}
 
-//search?o=desc&q=hello&s=updated&type=Repositories
+	//Performs keyword search for repositories in github
+	//includes params for filter and order
 	performSearch(query, filter, order) {
-	    //+ "?access_token=aa6f1f03df844f3049fcd49aab7509f0a"
 	    var url = "https://api.github.com/search/repositories?q=" + query ;
 	    if(filter !== filterDefault && filter !== undefined){
 	    	url += "+language:" + filter;
@@ -129,33 +128,8 @@ class SearchForm extends React.Component {
 	}
 }
 
-const languages = [
-	"C",
-	"C#",
-	"C++",
-	"Clojure",
-	"CoffeeScript",
-	"CSS",
-	"Go",
-	"Haskell",
-	"HTML",
-	"Java",
-	"JavaScript",
-	"Lua",
-	"Matlab",
-	"Objective-C",
-	"Perl",
-	"PHP",
-	"Python",
-	"R",
-	"Ruby",
-	"Scala",
-	"Shell",
-	"Swift",
-	"TeX",
-	"Vim script"];
-
-//?q=tetris+language:assembly
+//Select button lets user filter by language
+//default is all languages
 function FilterComponent(props) {
 	return(
 		<select onChange={props.handler} className="custom-select">
@@ -167,17 +141,21 @@ function FilterComponent(props) {
 	)					
 }
 
+//Select button lets user choose how to order results
+//Includes default (best match), most recent, and least recent
 function OrderComponent(props){
 		return(
 		<select onChange={props.handler} className="custom-select">
 			<option key='default' selected>Sort: Best Match</option>
-            <option key='asc' value='asc'>Sort: Ascending</option>
-            <option key='desc' value='desc'>Sort: Descending</option>
+            <option key='asc' value='asc'>Sort: Least Recent</option>
+            <option key='desc' value='desc'>Sort: Most Recent</option>
 		</select>
 
 	)
 }
 
+//Represents the list of repositories from the search
+//Also indicates if the results returned empty
 function RepoList(props) {
 	if (props.repos === undefined ) {
 		return null;
@@ -197,13 +175,7 @@ function RepoList(props) {
 	} 
 }
 
-function handleErrors(response) {
-    if (!response.ok) {
-        throw Error(response.statusText);
-    }
-    return response;
-}
-
+//Component representing each repository returned from the search
 class RepoItem extends React.Component {
 	constructor(props) {
 		super(props);
@@ -221,7 +193,8 @@ class RepoItem extends React.Component {
 
 	}
 
-	//fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`
+	//Fetches commits from the last 7 days from the github api for a given repo
+	//State only updates if response code is ok
 	getCommits(){
 	    fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`)
 	      .then(handleErrors)
@@ -238,6 +211,8 @@ class RepoItem extends React.Component {
 
 	}
 
+	// called when preview button clicked.
+	// toggles button text and clears commits if necessary
 	handlePreview(event){
 		console.log('clicked preview');
 		if (!this.state.preview){
@@ -276,18 +251,19 @@ class RepoItem extends React.Component {
 	}
 }
 
+//Displays a commit item in the CommitList
 function CommitItem(props){
 	var date = props.value.committer.date.slice(0,10)
 	return(
-		<li>{date}: "{props.value.message}"</li>
+		<li className="commit-item"><strong>{date}:</strong> "{props.value.message}"</li>
 	);
 }
 
-//currently only shows most recent 10 commits 
+//Displays a list of commits (if any)
 function CommitList(props) {
 		return (
-			<div className="preview">
-			<p> Recent commits: </p>
+			<div>
+			<h6> Recent commits: </h6>
 			<ul className="commit-list">
 				{props.commits.map((commit) =>
 		      		<CommitItem key={commit.sha}
@@ -298,19 +274,14 @@ function CommitList(props) {
 		)
 }
 
-// const data = [
-//       {daylabel: 'Sunday', contributor1: 4000, contributor2: 2400},
-//       {daylabel: 'Monday', contributor1: 3000, contributor2: 1398},
-// ];
-
+// Method parses commit json to create an object representing commits by contributor by date.
 // data = {
-// 	'Date': {}
-// 	'Date1': {}
+// 	'June 1': {name: 'June 1', contributor1: 1},
+// 	'June 2': {name: 'June 2', contributor1: 2, contributor2: 1}
 // }
-//Who gets credit, the committer or the author?
 function getContributors(props){
-	var now = new Date();
-	var contributors = getDates(SevenDaysPrior(), now);
+	//TODO: REFACTOR so that we only calculate the date array once, instead of everytime we click preview
+	var contributors = getDates(); 
 	props.forEach(function(commit) {
 		var name = 'unknown';
 		if (commit.author != null){
@@ -334,6 +305,14 @@ function getContributors(props){
 	return contributors;
 }
 
+// Method builds the graph from the dataset built by 'getContributors'
+// props.method = 'getContributors'
+// props.data = json from fetch of all commits in the last 7 days
+// BarChart expects data to look like this:
+// const data = [
+//       {daylabel: 'Sunday', contributor1: 4000, contributor2: 2400},
+//       {daylabel: 'Monday', contributor1: 3000, contributor2: 1398},
+// ];
 function CommitGraph(props){
 	var dataset = props.method(props.data);
 	var lines = [];
@@ -354,8 +333,9 @@ function CommitGraph(props){
 		}
 		data.push(dataset[key]);
 	}
-	console.log(data);
 	return (
+		<div>
+		<h6>Recent Commits by Author: </h6>
 		<BarChart width={600} height={300} data={data}
             margin={{top: 20, right: 30, left: 20, bottom: 5}}>
 		<XAxis dataKey="name"/>
@@ -365,15 +345,17 @@ function CommitGraph(props){
 	       <Legend />
 		{lines}	
 		</BarChart>
+		</div>
 	);
 }
 
-
+// Builds the preview of a repository with a list of commits and a graph
+// props contains the json of all commits returned by the fetch
 function PreviewRepo(props){
 	if (props.commits === undefined ) {
 		return null;
 	} else if ( props.commits.length === 0) {
-		return (<p>No recent commits.</p>);
+		return (<h6><i>No recent commits.</i></h6>);
 	} 
 	else {
 		return (
@@ -384,6 +366,48 @@ function PreviewRepo(props){
 		);
 	}
 }
+
+/** BEGIN HELPER METHODS **/
+
+// helper method for when a fetch returns
+// throws an error if the response is not ok
+function handleErrors(response) {
+    if (!response.ok) {
+        throw Error(response.statusText);
+    }
+    return response;
+}
+
+//defaults for filter and sort
+const orderDefault = 'Sort: Best Match';
+const filterDefault = 'Filter Language';
+
+//popular languages on github, used for filtering by language
+const languages = [
+	"C",
+	"C#",
+	"C++",
+	"Clojure",
+	"CoffeeScript",
+	"CSS",
+	"Go",
+	"Haskell",
+	"HTML",
+	"Java",
+	"JavaScript",
+	"Lua",
+	"Matlab",
+	"Objective-C",
+	"Perl",
+	"PHP",
+	"Python",
+	"R",
+	"Ruby",
+	"Scala",
+	"Shell",
+	"Swift",
+	"TeX",
+	"Vim script"];
 
 const monthsArray = [
 "January",
@@ -399,18 +423,19 @@ const monthsArray = [
 "November",
 "December"]
 
+//Returns date seven days earlier for use with github api
 //Github expects: YYYY-MM-DDTHH:MM:SSZ
 function SevenDaysPrior(props){
 	//https://stackoverflow.com/questions/19910161/javascript-calculating-date-from-today-date-to-7-days-before/20329800
-	var days = 6; // Days you want to subtract
 	var date = new Date();
-	var last = new Date(date.getTime() - (days * 24 * 60 * 60 * 1000));
+	var last = date.addDays(-6); // gets 6 days ago for total of 7 dates
 	var day =last.getDate();
 	var month=last.getMonth()+1;
 	var year=last.getFullYear();
 	return year + '-' + month + '-' + day + 'T00:00:00Z'
 }
 
+// Helper method used to add a day
 //https://stackoverflow.com/questions/4413590/javascript-get-array-of-dates-between-2-dates
 Date.prototype.addDays = function(days) {
     var date = new Date(this.valueOf());
@@ -418,9 +443,11 @@ Date.prototype.addDays = function(days) {
     return date;
 }
 
-function getDates(startDate, stopDate) {
-	stopDate = new Date();
-	startDate = stopDate.addDays(-6);
+// Returns an array of date strings used for the labels on the bar chart
+// example: if today was June 7: ['June 1', 'June 2', ... 'June 7']
+function getDates() {
+	var stopDate = new Date();
+	var startDate = stopDate.addDays(-6);
     var dateArray = {};
     var currentDate = startDate;
     while (currentDate <= stopDate) {
@@ -433,7 +460,29 @@ function getDates(startDate, stopDate) {
     return dateArray;
 }
 
-//https://stackoverflow.com/questions/1484506/random-color-generator
+// Returns the text describing when a repository was last updated
+// Props contains the 'updated_at' date string.
+function LastUpdated(props){
+	var date = new Date(props);
+	var now = new Date();
+	var difference = Math.abs(now - date) / 36e5;
+	if (difference < 1) {
+		var minutes = Math.floor(difference % 1 * 60)
+		return minutes + " minutes ago."
+	}
+	else if (Math.floor(difference) === 1){
+		return Math.floor(difference) + " hour ago."
+	}
+	else if (difference < 12 ) {
+		return Math.floor(difference) + " hours ago."
+	}
+	else{
+		return (monthsArray[date.getMonth()] + ' ' +date.getDate() + ', ' + date.getFullYear());
+	}
+}
+
+//Used to generate random colors for the bar chart
+//source: https://stackoverflow.com/questions/1484506/random-color-generator
 function getRandomColor() {
   var letters = '0123456789ABCDEF';
   var color = '#';
@@ -442,29 +491,6 @@ function getRandomColor() {
   }
   return color;
 }
-
-
-function LastUpdated(props){
-	console.log(props)
-	var date = new Date(props);
-	var now = new Date();
-	var today = (now.getDate() + "");
-	var difference = Math.abs(now - date) / 36e5;
-	if (difference < 1) {
-		var minutes = Math.floor(difference % 1 * 60)
-		return minutes + " minutes ago."
-
-	}
-	else if (difference < 12 ) {
-		return Math.floor(difference) + " hours ago."
-	}
-	else{
-		return (monthsArray[date.getMonth()] + ' ' +date.getDate() + ', ' + date.getFullYear());
-	}
-	
-	
-}
-
 
 
 ReactDOM.render(
