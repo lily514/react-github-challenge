@@ -1,5 +1,6 @@
 import React from 'react';
 import ReactDOM from 'react-dom';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend } from 'recharts';
 import './index.css';
 
 const orderDefault = 'Sort: Best Match';
@@ -215,7 +216,7 @@ class RepoItem extends React.Component {
 
 	//fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`
 	getCommits(){
-	    fetch(`https://api.github.com/repos/${this.state.name}/commits`)
+	    fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`)
 	      .then(response => response.json())
 	      .then(responseData => {
 	      	console.log(responseData);
@@ -261,7 +262,7 @@ class RepoItem extends React.Component {
 	  	</div>
 	  	<p>{this.state.description}</p>
 	  	<p>Updated: {LastUpdated(this.state.updated_at)} </p>
-	  	{ this.state.preview ? <CommitList commits={this.state.commits} /> : null }
+	  	{ this.state.preview ? <PreviewRepo commits={this.state.commits} /> : null }
 	  	</div>
 	  );
 	}
@@ -279,7 +280,7 @@ function CommitList(props) {
 	if (props.commits === undefined ) {
 		return null;
 	} else if ( props.commits.length === 0) {
-		return <p>No commits.</p>
+		return <p>No recent commits.</p>
 		//TODO: how to tell if the results return empty
 	} 
 	else {
@@ -287,13 +288,86 @@ function CommitList(props) {
 			<div className="preview">
 			<p> Recent commits: </p>
 			<ul className="commit-list">
-				{props.commits.slice(0,10).map((commit) =>
+				{props.commits.map((commit) =>
 		      		<CommitItem key={commit.sha}
 		                		value={commit.commit} />
 		        )}
 			</ul>
 			</div>
 		)
+	}
+}
+
+// const data = [
+//       {daylabel: 'Sunday', contributor1: 4000, contributor2: 2400},
+//       {daylabel: 'Monday', contributor1: 3000, contributor2: 1398},
+// ];
+
+// data = {
+// 	'Date': {}
+// 	'Date1': {}
+// }
+//Who gets credit, the committer or the author?
+function getContributors(props){
+	var now = new Date();
+	var contributors = getDates(SevenDaysPrior(), now);
+	props.forEach(function(commit) {
+		var name = commit.commit.author.name;
+		var date = commit.commit.author.date;
+		var commitDate = new Date(date);
+		var datestr = monthsArray[commitDate.getMonth()] + ' ' + commitDate.getDate();
+		console.log(name, datestr);
+		if (contributors[datestr]){
+			if (!contributors[datestr][name]){
+				contributors[datestr][name] = 0;
+			}
+			contributors[datestr][name] += 1;
+		}
+
+	});
+	console.log(contributors);
+	return contributors;
+}
+
+function CommitGraph(props){
+	var dataset = props.method(props.data);
+	var lines = [];
+	var data = [];
+	var authors = new Set();
+	for(var key in dataset) {
+		for (var label in dataset[key]){
+			if (!authors.has(label) & label !== "name"){
+				lines.push(<Bar stackId="a" dataKey={label} fill={getRandomColor()} />)
+			}
+		}
+		data.push(dataset[key]);
+	}
+	console.log(data);
+	return (
+		<BarChart width={600} height={300} data={data}
+            margin={{top: 20, right: 30, left: 20, bottom: 5}}>
+		<XAxis dataKey="name"/>
+	       <YAxis/>
+	       <CartesianGrid strokeDasharray="3 3"/>
+	       <Tooltip/>
+	       <Legend />
+		{lines}	
+		</BarChart>
+	);
+}
+
+
+function PreviewRepo(props){
+	if (props.commits === undefined){
+		return null;
+	}
+	else {
+		return (
+			<div className="preview">
+				<CommitList commits={props.commits} />
+				<CommitGraph method={getContributors} data={props.commits} />
+			</div>
+		);
 	}
 }
 
@@ -323,6 +397,39 @@ function SevenDaysPrior(props){
 	return year + '-' + month + '-' + day + 'T00:00:00Z'
 }
 
+//https://stackoverflow.com/questions/4413590/javascript-get-array-of-dates-between-2-dates
+Date.prototype.addDays = function(days) {
+    var date = new Date(this.valueOf());
+    date.setDate(date.getDate() + days);
+    return date;
+}
+
+function getDates(startDate, stopDate) {
+	stopDate = new Date();
+	startDate = stopDate.addDays(-7);
+    var dateArray = {};
+    var currentDate = startDate;
+    while (currentDate <= stopDate) {
+    	currentDate = new Date(currentDate);
+    	var datestr = monthsArray[currentDate.getMonth()] + ' ' + currentDate.getDate();
+        dateArray[datestr] = {};
+        dateArray[datestr]['name'] = datestr;
+        currentDate = currentDate.addDays(1);
+    }
+    return dateArray;
+}
+
+//https://stackoverflow.com/questions/1484506/random-color-generator
+function getRandomColor() {
+  var letters = '0123456789ABCDEF';
+  var color = '#';
+  for (var i = 0; i < 6; i++) {
+    color += letters[Math.floor(Math.random() * 16)];
+  }
+  return color;
+}
+
+
 function LastUpdated(props){
 	console.log(props)
 	var date = new Date(props);
@@ -331,7 +438,7 @@ function LastUpdated(props){
 	var difference = Math.abs(now - date) / 36e5;
 	if (difference < 1) {
 		var minutes = Math.floor(difference % 1 * 60)
-		return minutes + "minutes ago."
+		return minutes + " minutes ago."
 
 	}
 	else if (difference < 12 ) {
