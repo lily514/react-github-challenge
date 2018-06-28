@@ -11,3 +11,11 @@ Using the React JavaScript Library and GitHub APIs, we’d like to you to develo
 However you implement your code is completely up to you.
 
 Please make your code available in a public GitHub repository and share the link with us in an email to mewu@purdue.edu by Thursday, June 28 at 4pm. Any commits after the allotted time will not be considered in your final evaluation.
+
+
+---
+
+Assumptions:
+* Views can be nested within other views
+* Recent commits means within the last seven days for consistency with chart
+* "Any given repository", means it was a repository in a search result
