@@ -197,6 +197,13 @@ function RepoList(props) {
 	} 
 }
 
+function handleErrors(response) {
+    if (!response.ok) {
+        throw Error(response.statusText);
+    }
+    return response;
+}
+
 class RepoItem extends React.Component {
 	constructor(props) {
 		super(props);
@@ -217,6 +224,7 @@ class RepoItem extends React.Component {
 	//fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`
 	getCommits(){
 	    fetch(`https://api.github.com/repos/${this.state.name}/commits?since=${SevenDaysPrior()}`)
+	      .then(handleErrors)
 	      .then(response => response.json())
 	      .then(responseData => {
 	      	console.log(responseData);
@@ -312,7 +320,12 @@ function getContributors(props){
 	var now = new Date();
 	var contributors = getDates(SevenDaysPrior(), now);
 	props.forEach(function(commit) {
-		var name = commit.commit.author.name;
+		var name = 'unknown';
+		if (commit.author != null){
+			name = commit.author.login;
+		} else {
+			name = commit.commit.author.name;
+		}
 		var date = commit.commit.author.date;
 		var commitDate = new Date(date);
 		var datestr = monthsArray[commitDate.getMonth()] + ' ' + commitDate.getDate();
@@ -334,10 +347,17 @@ function CommitGraph(props){
 	var lines = [];
 	var data = [];
 	var authors = new Set();
+	var colors = new Set();
 	for(var key in dataset) {
 		for (var label in dataset[key]){
 			if (!authors.has(label) & label !== "name"){
-				lines.push(<Bar stackId="a" dataKey={label} fill={getRandomColor()} />)
+				authors.add(label);
+				var color = getRandomColor();
+				while (colors.has(color)){
+					color = getRandomColor();
+				}
+				colors.add(color);
+				lines.push(<Bar stackId="a" dataKey={label} fill={color} />)
 			}
 		}
 		data.push(dataset[key]);
@@ -388,7 +408,7 @@ const monthsArray = [
 //Github expects: YYYY-MM-DDTHH:MM:SSZ
 function SevenDaysPrior(props){
 	//https://stackoverflow.com/questions/19910161/javascript-calculating-date-from-today-date-to-7-days-before/20329800
-	var days = 7; // Days you want to subtract
+	var days = 6; // Days you want to subtract
 	var date = new Date();
 	var last = new Date(date.getTime() - (days * 24 * 60 * 60 * 1000));
 	var day =last.getDate();
@@ -406,7 +426,7 @@ Date.prototype.addDays = function(days) {
 
 function getDates(startDate, stopDate) {
 	stopDate = new Date();
-	startDate = stopDate.addDays(-7);
+	startDate = stopDate.addDays(-6);
     var dateArray = {};
     var currentDate = startDate;
     while (currentDate <= stopDate) {
