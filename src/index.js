@@ -285,13 +285,6 @@ function CommitItem(props){
 
 //currently only shows most recent 10 commits 
 function CommitList(props) {
-	if (props.commits === undefined ) {
-		return null;
-	} else if ( props.commits.length === 0) {
-		return <p>No recent commits.</p>
-		//TODO: how to tell if the results return empty
-	} 
-	else {
 		return (
 			<div className="preview">
 			<p> Recent commits: </p>
@@ -303,7 +296,6 @@ function CommitList(props) {
 			</ul>
 			</div>
 		)
-	}
 }
 
 // const data = [
@@ -378,9 +370,11 @@ function CommitGraph(props){
 
 
 function PreviewRepo(props){
-	if (props.commits === undefined){
+	if (props.commits === undefined ) {
 		return null;
-	}
+	} else if ( props.commits.length === 0) {
+		return (<p>No recent commits.</p>);
+	} 
 	else {
 		return (
 			<div className="preview">
